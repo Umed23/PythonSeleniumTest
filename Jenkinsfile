@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    environment {
+        PYTHON_PATH = "C:\\Users\\acer\\AppData\\Local\\Programs\\Python\\Python312\\python.exe"
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -11,20 +15,19 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 bat """
-                REM Check if Python is available
-                python --version
-                if %ERRORLEVEL% NEQ 0 (
-                    echo Python is not installed or not in PATH
+                REM Check if Python exists
+                if not exist "${PYTHON_PATH}" (
+                    echo Python not found at ${PYTHON_PATH}
                     exit /b 1
                 )
 
                 REM Create virtual environment
-                python -m venv venv
+                "${PYTHON_PATH}" -m venv venv
 
                 REM Activate virtual environment and install dependencies
                 call venv\\Scripts\\activate
-                python -m pip install --upgrade pip
-                python -m pip install -r requirements.txt
+                "${PYTHON_PATH}" -m pip install --upgrade pip
+                "${PYTHON_PATH}" -m pip install -r requirements.txt
                 """
             }
         }
@@ -41,6 +44,7 @@ pipeline {
 
     post {
         always {
+            echo "Archiving test reports..."
             junit 'report.xml'
             archiveArtifacts artifacts: '**/report.xml', fingerprint: true
         }
