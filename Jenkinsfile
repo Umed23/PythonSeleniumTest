@@ -11,10 +11,20 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 bat """
+                REM Check if Python is available
+                python --version
+                if %ERRORLEVEL% NEQ 0 (
+                    echo Python is not installed or not in PATH
+                    exit /b 1
+                )
+
+                REM Create virtual environment
                 python -m venv venv
+
+                REM Activate virtual environment and install dependencies
                 call venv\\Scripts\\activate
-                pip install --upgrade pip
-                pip install -r requirements.txt
+                python -m pip install --upgrade pip
+                python -m pip install -r requirements.txt
                 """
             }
         }
