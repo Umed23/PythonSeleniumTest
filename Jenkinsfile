@@ -4,28 +4,35 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/Umed23/PythonSeleniumTest.git'
+                git branch: 'main', url: 'https://github.com/Umed23/PythonSeleniumTest.git'
             }
         }
 
         stage('Setup Environment') {
             steps {
-                sh 'python -m venv venv'
-                sh '. venv/bin/activate && pip install -r requirements.txt'
+                bat """
+                python -m venv venv
+                call venv\\Scripts\\activate
+                pip install --upgrade pip
+                pip install -r requirements.txt
+                """
             }
         }
 
         stage('Run Selenium Tests') {
             steps {
-                sh '. venv/bin/activate && pytest --html=report.html'
+                bat """
+                call venv\\Scripts\\activate
+                pytest -v --maxfail=1 --disable-warnings --junitxml=report.xml
+                """
             }
         }
     }
 
     post {
         always {
-            archiveArtifacts artifacts: 'report.html', fingerprint: true
+            junit 'report.xml'
+            archiveArtifacts artifacts: '**/report.xml', fingerprint: true
         }
     }
 }
