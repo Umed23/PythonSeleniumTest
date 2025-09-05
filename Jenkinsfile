@@ -22,17 +22,19 @@ pipeline {
                     exit /b 1
                 )
 
-                REM Create virtual environment
-                "${PYTHON_PATH}" -m venv venv
+                REM Create virtual environment if it doesn't exist
+                if not exist "venv" (
+                    "${PYTHON_PATH}" -m venv venv
+                )
 
                 REM Activate virtual environment
                 call venv\\Scripts\\activate
 
                 REM Upgrade pip
-                "${PYTHON_PATH}" -m pip install --upgrade pip
+                python -m pip install --upgrade pip
 
                 REM Install dependencies; fail gracefully if conflicts occur
-                "${PYTHON_PATH}" -m pip install -r requirements.txt || (
+                python -m pip install -r requirements.txt || (
                     echo ERROR: pip install failed. Check for version conflicts.
                     exit /b 1
                 )
@@ -43,22 +45,29 @@ pipeline {
         stage('Run Selenium Tests') {
             steps {
                 bat """
+                REM Ensure reports folder exists
+                if not exist reports mkdir reports
+
+                REM Activate virtual environment
                 call venv\\Scripts\\activate
-                pytest -v --maxfail=1 --disable-warnings --junitxml=report.xml || (
-                    echo ERROR: Tests failed
-                    exit /b 1
-                )
+
+                REM Run pytest with JUnit XML output
+                python -m pytest --junitxml=reports\\test-results.xml
                 """
+            }
+            post {
+                always {
+                    // Archive JUnit report
+                    junit 'reports/test-results.xml'
+                    archiveArtifacts artifacts: 'reports/test-results.xml', fingerprint: true
+                }
             }
         }
     }
 
     post {
         always {
-            echo "Archiving test reports..."
-            // Archive JUnit report
-            junit allowEmptyResults: true, testResults: 'report.xml'
-            archiveArtifacts artifacts: '**/report.xml', fingerprint: true
+            echo "Pipeline finished."
         }
     }
 }
